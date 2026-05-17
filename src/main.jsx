@@ -38,196 +38,187 @@ function classifySeniority(title = "") {
 
 
 // ── Title normalizer ─────────────────────────────────────────────────────────
-// Each rule: { pattern: RegExp, canonical: string }
-// Rules are tested in order; first match wins.
-// Raw title is preserved in Position_raw; normalized goes into Position.
+// Simple lookup map: lowercased input variant → canonical title.
+// Add more variants as you discover unmatched titles in the panel below.
 
-const TITLE_RULES = [
-  // ── C-Suite ──
-  { pattern: /\bchief\s+exec/i,                              canonical: "CEO" },
-  { pattern: /\bceo\b/i,                                     canonical: "CEO" },
-  { pattern: /\bchief\s+tech/i,                              canonical: "CTO" },
-  { pattern: /\bcto\b/i,                                     canonical: "CTO" },
-  { pattern: /\bchief\s+prod/i,                              canonical: "CPO" },
-  { pattern: /\bcpo\b/i,                                     canonical: "CPO" },
-  { pattern: /\bchief\s+op/i,                                canonical: "COO" },
-  { pattern: /\bcoo\b/i,                                     canonical: "COO" },
-  { pattern: /\bchief\s+fin/i,                               canonical: "CFO" },
-  { pattern: /\bcfo\b/i,                                     canonical: "CFO" },
-  { pattern: /\bchief\s+rev/i,                               canonical: "CRO" },
-  { pattern: /\bchief\s+mark/i,                              canonical: "CMO" },
-  { pattern: /\bcmo\b/i,                                     canonical: "CMO" },
-  { pattern: /\bchief\s+data/i,                              canonical: "CDO" },
-  { pattern: /\bchief\s+info/i,                              canonical: "CIO" },
-  { pattern: /\bchief\s+sec/i,                               canonical: "CISO" },
-  { pattern: /\bchief\s+design/i,                            canonical: "Chief Design Officer" },
-  { pattern: /\bchief\s+of\s+staff/i,                       canonical: "Chief of Staff" },
-  { pattern: /\bco[\s-]?founder\b/i,                        canonical: "Co-Founder" },
-  { pattern: /\bfounder\b/i,                                 canonical: "Founder" },
-  { pattern: /\bpresident\b/i,                               canonical: "President" },
-  { pattern: /\bmanaging\s+(director|partner)\b/i,          canonical: "Managing Director" },
+const TITLE_MAP = {
+  // ── CEO ──
+  "ceo":                          "CEO",
+  "chief executive officer":      "CEO",
+  "chief executive":              "CEO",
 
-  // ── VP ──
-  { pattern: /\bevp\b|\bexec.*\bvp\b/i,                   canonical: "EVP" },
-  { pattern: /\bsvp\b|\bsenior.*\bvp\b/i,                 canonical: "SVP" },
-  { pattern: /\bvp\b.*\beng/i,                              canonical: "VP Engineering" },
-  { pattern: /\bvp\b.*\bprod/i,                             canonical: "VP Product" },
-  { pattern: /\bvp\b.*\bsales/i,                            canonical: "VP Sales" },
-  { pattern: /\bvp\b.*\bmark/i,                             canonical: "VP Marketing" },
-  { pattern: /\bvp\b.*\bdesign/i,                           canonical: "VP Design" },
-  { pattern: /\bvp\b.*\bdata/i,                             canonical: "VP Data" },
-  { pattern: /\bvp\b.*\bfin/i,                              canonical: "VP Finance" },
-  { pattern: /\bvice\s+pres/i,                               canonical: "VP" },
-  { pattern: /\bvp\b/i,                                      canonical: "VP" },
+  // ── CTO ──
+  "cto":                          "CTO",
+  "chief technology officer":     "CTO",
+  "chief technical officer":      "CTO",
 
-  // ── Director ──
-  { pattern: /\bdir.*\beng/i,                                canonical: "Director of Engineering" },
-  { pattern: /\bdir.*\bprod/i,                               canonical: "Director of Product" },
-  { pattern: /\bdir.*\bsales/i,                              canonical: "Director of Sales" },
-  { pattern: /\bdir.*\bmark/i,                               canonical: "Director of Marketing" },
-  { pattern: /\bdir.*\bdesign/i,                             canonical: "Director of Design" },
-  { pattern: /\bdir.*\bdata/i,                               canonical: "Director of Data" },
-  { pattern: /\bdir.*\bhr\b|\bdir.*\bpeople/i,            canonical: "Director of People" },
-  { pattern: /\bdirector\b/i,                                canonical: "Director" },
-  { pattern: /\bhead\s+of\s+eng/i,                          canonical: "Head of Engineering" },
-  { pattern: /\bhead\s+of\s+prod/i,                         canonical: "Head of Product" },
-  { pattern: /\bhead\s+of\s+sales/i,                        canonical: "Head of Sales" },
-  { pattern: /\bhead\s+of\s+mark/i,                         canonical: "Head of Marketing" },
-  { pattern: /\bhead\s+of\s+design/i,                       canonical: "Head of Design" },
-  { pattern: /\bhead\s+of\s+data/i,                         canonical: "Head of Data" },
-  { pattern: /\bhead\s+of\b/i,                              canonical: "Head of" },
-  { pattern: /\bgeneral\s+manager\b/i,                      canonical: "General Manager" },
+  // ── COO ──
+  "coo":                          "COO",
+  "chief operating officer":      "COO",
+  "chief operations officer":     "COO",
 
-  // ── Engineering ──
-  { pattern: /\bstaff\b.*\beng/i,                           canonical: "Staff Engineer" },
-  { pattern: /\bstaff\b.*\bswe\b/i,                        canonical: "Staff Engineer" },
-  { pattern: /\bprincipal\b.*\beng/i,                       canonical: "Principal Engineer" },
-  { pattern: /\bdistinguished\b.*\beng/i,                   canonical: "Distinguished Engineer" },
-  { pattern: /\beng.*\bmanager\b|\bem\b/i,                canonical: "Engineering Manager" },
-  { pattern: /\bsenior\b.*\bstaff\b.*\beng/i,             canonical: "Senior Staff Engineer" },
-  { pattern: /\b(sr\.?|senior)\b.*\b(swe|software\s+eng)/i, canonical: "Senior Software Engineer" },
-  { pattern: /\b(jr\.?|junior)\b.*\b(swe|software\s+eng)/i, canonical: "Junior Software Engineer" },
-  { pattern: /\bsoftware\s+eng/i,                            canonical: "Software Engineer" },
-  { pattern: /\bswe\b/i,                                     canonical: "Software Engineer" },
-  { pattern: /\bfull[\s-]?stack/i,                           canonical: "Full Stack Engineer" },
-  { pattern: /\bfrontend\b|\bfront[\s-]end\b/i,           canonical: "Frontend Engineer" },
-  { pattern: /\bbackend\b|\bback[\s-]end\b/i,             canonical: "Backend Engineer" },
-  { pattern: /\bmobile\b.*\b(eng|dev)/i,                    canonical: "Mobile Engineer" },
-  { pattern: /\bios\b.*\b(eng|dev)/i,                       canonical: "iOS Engineer" },
-  { pattern: /\bandroid\b.*\b(eng|dev)/i,                   canonical: "Android Engineer" },
-  { pattern: /\bdevops\b/i,                                  canonical: "DevOps Engineer" },
-  { pattern: /\bsite\s+rel/i,                                canonical: "SRE" },
-  { pattern: /\bsre\b/i,                                     canonical: "SRE" },
-  { pattern: /\bplatform\b.*\beng/i,                        canonical: "Platform Engineer" },
-  { pattern: /\binfra.*\beng/i,                              canonical: "Infrastructure Engineer" },
-  { pattern: /\bsecurity\b.*\beng/i,                        canonical: "Security Engineer" },
-  { pattern: /\bqa\b|\bquality\s+assur/i,                  canonical: "QA Engineer" },
-  { pattern: /\bembedded\b.*\beng/i,                        canonical: "Embedded Engineer" },
-  { pattern: /\b(sr\.?|senior)\b.*\beng/i,                 canonical: "Senior Engineer" },
-  { pattern: /\b(jr\.?|junior)\b.*\beng/i,                 canonical: "Junior Engineer" },
-  { pattern: /\bengineer\b/i,                                canonical: "Engineer" },
+  // ── CFO ──
+  "cfo":                          "CFO",
+  "chief financial officer":      "CFO",
 
-  // ── Product ──
-  { pattern: /\b(sr\.?|senior)\b.*\bpm\b/i,               canonical: "Senior Product Manager" },
-  { pattern: /\b(sr\.?|senior)\b.*\bprod.*\bman/i,        canonical: "Senior Product Manager" },
-  { pattern: /\bgroup\s+pm\b|\bgpm\b/i,                   canonical: "Group Product Manager" },
-  { pattern: /\bprincipal\s+pm\b/i,                         canonical: "Principal Product Manager" },
-  { pattern: /\bstaff\s+pm\b/i,                             canonical: "Staff Product Manager" },
-  { pattern: /\bprod.*\bman|\bpm\b/i,                      canonical: "Product Manager" },
-  { pattern: /\bprod.*\bown/i,                               canonical: "Product Owner" },
+  // ── CPO ──
+  "cpo":                          "CPO",
+  "chief product officer":        "CPO",
+  "chief people officer":         "CPO",
 
-  // ── Design ──
-  { pattern: /\b(sr\.?|senior)\b.*\b(ux|ui|product)\s*(design|research)/i, canonical: "Senior Designer" },
-  { pattern: /\bux\s*research/i,                             canonical: "UX Researcher" },
-  { pattern: /\bux\b|\buser\s+exp/i,                       canonical: "UX Designer" },
-  { pattern: /\bui\b.*\bdesign/i,                           canonical: "UI Designer" },
-  { pattern: /\bprod.*\bdesign/i,                            canonical: "Product Designer" },
-  { pattern: /\bgraphic\s+design/i,                          canonical: "Graphic Designer" },
-  { pattern: /\bbrand\s+design/i,                            canonical: "Brand Designer" },
-  { pattern: /\bmotion\s+design/i,                           canonical: "Motion Designer" },
-  { pattern: /\bdesign\b/i,                                  canonical: "Designer" },
+  // ── Founder ──
+  "founder":                      "Founder",
+  "co-founder":                   "Co-Founder",
+  "cofounder":                    "Co-Founder",
+  "co founder":                   "Co-Founder",
+  "founder & ceo":                "Founder & CEO",
+  "founder and ceo":              "Founder & CEO",
 
-  // ── Data & ML ──
-  { pattern: /\bml\s+eng|\bmachine\s+learn.*\beng/i,      canonical: "ML Engineer" },
-  { pattern: /\bai\s+eng/i,                                  canonical: "AI Engineer" },
-  { pattern: /\bdata\s+eng/i,                                canonical: "Data Engineer" },
-  { pattern: /\b(sr\.?|senior)\b.*\bdata\s+sci/i,         canonical: "Senior Data Scientist" },
-  { pattern: /\bdata\s+sci/i,                                canonical: "Data Scientist" },
-  { pattern: /\bdata\s+anal/i,                               canonical: "Data Analyst" },
-  { pattern: /\bml\b|\bmachine\s+learn/i,                  canonical: "ML Researcher" },
-  { pattern: /\bquant\b/i,                                   canonical: "Quantitative Analyst" },
-  { pattern: /\bbusiness\s+intel/i,                          canonical: "Business Intelligence Analyst" },
-  { pattern: /\banalytics\b.*\beng/i,                       canonical: "Analytics Engineer" },
+  // ── VP Engineering ──
+  "vp engineering":               "VP Engineering",
+  "vp of engineering":            "VP Engineering",
+  "vice president engineering":   "VP Engineering",
+  "vice president of engineering":"VP Engineering",
 
-  // ── Sales ──
-  { pattern: /\baccount\s+exec/i,                            canonical: "Account Executive" },
-  { pattern: /\baccount\s+man/i,                             canonical: "Account Manager" },
-  { pattern: /\bsales\s+dev.*\brep|\bsdr\b/i,             canonical: "SDR" },
-  { pattern: /\bbusiness\s+dev.*\brep|\bbdr\b/i,          canonical: "BDR" },
-  { pattern: /\bcustomer\s+succ/i,                           canonical: "Customer Success Manager" },
-  { pattern: /\bsales\s+eng/i,                               canonical: "Sales Engineer" },
-  { pattern: /\bsolution.*\beng/i,                           canonical: "Solutions Engineer" },
-  { pattern: /\bsales\b/i,                                   canonical: "Sales" },
+  // ── VP Product ──
+  "vp product":                   "VP Product",
+  "vp of product":                "VP Product",
+  "vice president of product":    "VP Product",
 
-  // ── Marketing ──
-  { pattern: /\bgrowth\b.*\b(mark|eng|hack)/i,              canonical: "Growth" },
-  { pattern: /\bperform.*\bmark/i,                           canonical: "Performance Marketing Manager" },
-  { pattern: /\bcontent\b.*\bmark/i,                        canonical: "Content Marketer" },
-  { pattern: /\bseo\b/i,                                     canonical: "SEO Specialist" },
-  { pattern: /\bpaid\b.*\b(media|ads|social)/i,             canonical: "Paid Media Manager" },
-  { pattern: /\bbrand\b.*\bmark/i,                          canonical: "Brand Marketer" },
-  { pattern: /\bprod.*\bmark/i,                              canonical: "Product Marketing Manager" },
-  { pattern: /\bdemand\s+gen/i,                              canonical: "Demand Generation Manager" },
-  { pattern: /\bcomms\b|\bcommunications\b/i,              canonical: "Communications Manager" },
-  { pattern: /\bpr\b|\bpublic\s+rel/i,                     canonical: "PR Manager" },
-  { pattern: /\bmarket/i,                                     canonical: "Marketer" },
+  // ── Director of Engineering ──
+  "director of engineering":      "Director of Engineering",
+  "director, engineering":        "Director of Engineering",
+  "engineering director":         "Director of Engineering",
 
-  // ── People / HR ──
-  { pattern: /\bpeople\s+(ops|partner|lead)/i,               canonical: "People Operations" },
-  { pattern: /\btalent\s+acq/i,                              canonical: "Talent Acquisition" },
-  { pattern: /\brecruit/i,                                    canonical: "Recruiter" },
-  { pattern: /\bhr\s+business\s+part/i,                     canonical: "HR Business Partner" },
-  { pattern: /\bhris\b/i,                                    canonical: "HR Systems" },
-  { pattern: /\bhuman\s+res|\bhr\b/i,                      canonical: "HR Manager" },
+  // ── Director of Product ──
+  "director of product":          "Director of Product",
+  "director, product":            "Director of Product",
+  "product director":             "Director of Product",
+  "director of product management":"Director of Product",
 
-  // ── Finance & Legal ──
-  { pattern: /\bfinancial\s+anal/i,                          canonical: "Financial Analyst" },
-  { pattern: /\bfinancial\s+plan/i,                          canonical: "FP&A" },
-  { pattern: /\bfp&a\b|\bfp\s*&\s*a\b/i,                canonical: "FP&A" },
-  { pattern: /\bcontrol/i,                                    canonical: "Controller" },
-  { pattern: /\baccountant\b|\baccounting\b/i,             canonical: "Accountant" },
-  { pattern: /\bcounsel\b|\bgeneral\s+counsel/i,           canonical: "General Counsel" },
-  { pattern: /\battorn/i,                                     canonical: "Attorney" },
-  { pattern: /\bcompli/i,                                     canonical: "Compliance" },
+  // ── Engineering Manager ──
+  "engineering manager":          "Engineering Manager",
+  "eng manager":                  "Engineering Manager",
+  "manager, engineering":         "Engineering Manager",
+  "em":                           "Engineering Manager",
 
-  // ── Operations ──
-  { pattern: /\bops\s+man|\boperations\s+man/i,            canonical: "Operations Manager" },
-  { pattern: /\bprog.*\bman|\bprogram\s+man/i,             canonical: "Program Manager" },
-  { pattern: /\bproj.*\bman|\bproject\s+man/i,             canonical: "Project Manager" },
-  { pattern: /\bscrum\s+mas|\bagile\s+coach/i,             canonical: "Scrum Master" },
-  { pattern: /\bchief\s+of\s+staff/i,                       canonical: "Chief of Staff" },
-  { pattern: /\bstrategy\b/i,                                canonical: "Strategy" },
-  { pattern: /\bconsult/i,                                    canonical: "Consultant" },
+  // ── Software Engineer ──
+  "software engineer":            "Software Engineer",
+  "software developer":           "Software Engineer",
+  "swe":                          "Software Engineer",
+  "software engineering":         "Software Engineer",
 
-  // ── Early career / Other ──
-  { pattern: /\bintern\b/i,                                  canonical: "Intern" },
-  { pattern: /\bstudent\b/i,                                 canonical: "Student" },
-  { pattern: /\bfreelance\b|\bself[\s-]?employ/i,          canonical: "Freelancer" },
-  { pattern: /\badviso/i,                                     canonical: "Advisor" },
-  { pattern: /\bboard\b.*\bmember/i,                        canonical: "Board Member" },
-  { pattern: /\bventure\b|\b\bvc\b/i,                     canonical: "Venture Capitalist" },
-  { pattern: /\bangel\b.*\binvest/i,                        canonical: "Angel Investor" },
-  { pattern: /\binvest/i,                                     canonical: "Investor" },
-];
+  // ── Senior Software Engineer ──
+  "senior software engineer":     "Senior Software Engineer",
+  "sr. software engineer":        "Senior Software Engineer",
+  "sr software engineer":         "Senior Software Engineer",
+  "senior swe":                   "Senior Software Engineer",
+  "sr. swe":                      "Senior Software Engineer",
+  "senior software developer":    "Senior Software Engineer",
+
+  // ── Staff Engineer ──
+  "staff engineer":               "Staff Engineer",
+  "staff software engineer":      "Staff Engineer",
+  "staff swe":                    "Staff Engineer",
+
+  // ── Principal Engineer ──
+  "principal engineer":           "Principal Engineer",
+  "principal software engineer":  "Principal Engineer",
+
+  // ── Product Manager ──
+  "product manager":              "Product Manager",
+  "pm":                           "Product Manager",
+  "product management":           "Product Manager",
+
+  // ── Senior Product Manager ──
+  "senior product manager":       "Senior Product Manager",
+  "sr. product manager":          "Senior Product Manager",
+  "sr product manager":           "Senior Product Manager",
+  "senior pm":                    "Senior Product Manager",
+  "sr. pm":                       "Senior Product Manager",
+
+  // ── Product Designer ──
+  "product designer":             "Product Designer",
+  "ux designer":                  "Product Designer",
+  "ui/ux designer":               "Product Designer",
+  "ui ux designer":               "Product Designer",
+  "ux/ui designer":               "Product Designer",
+
+  // ── Senior Product Designer ──
+  "senior product designer":      "Senior Product Designer",
+  "sr. product designer":         "Senior Product Designer",
+  "senior ux designer":           "Senior Product Designer",
+
+  // ── Data Scientist ──
+  "data scientist":               "Data Scientist",
+  "data science":                 "Data Scientist",
+
+  // ── Senior Data Scientist ──
+  "senior data scientist":        "Senior Data Scientist",
+  "sr. data scientist":           "Senior Data Scientist",
+  "sr data scientist":            "Senior Data Scientist",
+
+  // ── Data Engineer ──
+  "data engineer":                "Data Engineer",
+  "data engineering":             "Data Engineer",
+
+  // ── ML Engineer ──
+  "ml engineer":                  "ML Engineer",
+  "machine learning engineer":    "ML Engineer",
+  "ai/ml engineer":               "ML Engineer",
+  "ml/ai engineer":               "ML Engineer",
+
+  // ── DevOps Engineer ──
+  "devops engineer":              "DevOps Engineer",
+  "devops":                       "DevOps Engineer",
+  "dev ops engineer":             "DevOps Engineer",
+
+  // ── Account Executive ──
+  "account executive":            "Account Executive",
+  "ae":                           "Account Executive",
+  "senior account executive":     "Senior Account Executive",
+  "sr. account executive":        "Senior Account Executive",
+
+  // ── Recruiter ──
+  "recruiter":                    "Recruiter",
+  "technical recruiter":          "Technical Recruiter",
+  "tech recruiter":               "Technical Recruiter",
+  "talent acquisition":           "Recruiter",
+  "talent acquisition specialist":"Recruiter",
+
+  // ── Marketing Manager ──
+  "marketing manager":            "Marketing Manager",
+  "digital marketing manager":    "Marketing Manager",
+  "growth marketing manager":     "Marketing Manager",
+
+  // ── Consultant ──
+  "consultant":                   "Consultant",
+  "senior consultant":            "Senior Consultant",
+  "associate consultant":         "Associate Consultant",
+
+  // ── Analyst ──
+  "analyst":                      "Analyst",
+  "business analyst":             "Business Analyst",
+  "financial analyst":            "Financial Analyst",
+  "data analyst":                 "Data Analyst",
+  "senior analyst":               "Senior Analyst",
+  "sr. analyst":                  "Senior Analyst",
+
+  // ── Intern ──
+  "intern":                       "Intern",
+  "software engineering intern":  "Engineering Intern",
+  "swe intern":                   "Engineering Intern",
+  "product management intern":    "Product Intern",
+  "pm intern":                    "Product Intern",
+};
 
 function normalizeTitle(raw = "") {
   if (!raw.trim()) return { canonical: "", matched: false };
-  for (const rule of TITLE_RULES) {
-    if (rule.pattern.test(raw)) {
-      return { canonical: rule.canonical, matched: true };
-    }
+  const key = raw.trim().toLowerCase();
+  if (TITLE_MAP[key]) {
+    return { canonical: TITLE_MAP[key], matched: true };
   }
-  return { canonical: raw, matched: false }; // return raw if no match
+  return { canonical: raw, matched: false };
 }
 
 function normalizeData(rows) {
