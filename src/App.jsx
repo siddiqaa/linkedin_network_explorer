@@ -571,10 +571,22 @@ function UnmatchedTitles({ data }) {
 
   const pct = ((unmatched.reduce((s,[,n])=>s+n,0) / data.length) * 100).toFixed(1);
 
+  function downloadCSV() {
+    const rows = [["Title","Count"], ...unmatched];
+    const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '\"')}"` ).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "unmatched_titles.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: 24, marginBottom: 20 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }} onClick={() => setExpanded(e => !e)}>
-        <div style={{ flex: 1 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ flex: 1, cursor: "pointer" }} onClick={() => setExpanded(e => !e)}>
           <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 2, color: C.textDim, textTransform: "uppercase" }}>
             Unmatched Titles
           </div>
@@ -582,13 +594,27 @@ function UnmatchedTitles({ data }) {
             {unmatched.length} unique titles ({pct}% of connections) didn't match any normalisation rule
           </div>
         </div>
-        <span style={{ color: C.textDim, fontSize: 14 }}>{expanded ? "▲" : "▼"}</span>
+        <button onClick={downloadCSV} style={{
+          padding: "6px 14px", background: "transparent",
+          border: `1px solid ${C.border}`, borderRadius: 7,
+          color: C.textDim, fontSize: 11, cursor: "pointer",
+          fontFamily: "inherit", whiteSpace: "nowrap",
+          transition: "border-color 0.15s, color 0.15s",
+        }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = C.accent; e.currentTarget.style.color = C.accent; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.textDim; }}
+        >
+          Download CSV ↓
+        </button>
+        <span style={{ color: C.textDim, fontSize: 14, cursor: "pointer" }} onClick={() => setExpanded(e => !e)}>
+          {expanded ? "▲" : "▼"}
+        </span>
       </div>
 
       {expanded && (
         <div style={{ marginTop: 16 }}>
           <div style={{ fontSize: 11, color: C.muted, marginBottom: 12 }}>
-            These are returned as-is. Add rules to TITLE_RULES in the code to normalise them.
+            These are returned as-is. Download the CSV and share it to improve the normalisation map.
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
             {unmatched.map(([title, count]) => (
@@ -769,7 +795,6 @@ export default function App() {
                 <Section title="Top 12 Companies">
                   <TopCompanies data={data} />
                 </Section>
-                <UnmatchedTitles data={data} />
                 <UnmatchedTitles data={data} />
               </>
             )}
