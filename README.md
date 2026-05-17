@@ -2,9 +2,12 @@
 
 A fast, privacy-first dashboard for exploring your LinkedIn connections. Upload your `Connections.csv` and instantly visualise your network — no server, no account, no data leaving your browser.
 
-**[Live demo →](https://your-username.github.io/linkedin-dashboard)**
+**[Live demo →](https://linkedin-network-explorer.vercel.app/)**
 
-![Dashboard preview](preview.png)
+![Dashboard preview 1](/screenshots/Screenshot%202026-05-16%206.02.59%20PM.png)
+![Dashboard preview 2](/screenshots/Screenshot%202026-05-16%206.03.09%20PM.png)
+![Dashboard preview 3](/screenshots/Screenshot%202026-05-16%206.03.15%20PM.png)
+![Dashboard preview 4](/screenshots/Screenshot%202026-05-16%206.03.20%20PM.png)
 
 ---
 
