@@ -20,19 +20,44 @@ const C = {
 
 // ── Seniority classifier ────────────────────────────────────────────────────
 const SENIORITY = [
-  { label: "C-Suite / Founder", keywords: ["ceo","cto","coo","cfo","cpo","chief","founder","co-founder","president","owner","partner"], color: C.accent },
-  { label: "VP / Director",     keywords: ["vp","vice president","director","head of","svp","evp","gm","general manager"], color: C.accent2 },
-  { label: "Manager / Lead",    keywords: ["manager","lead","principal","staff","supervisor","team lead","tech lead"], color: "#a78bfa" },
-  { label: "Senior / Mid",      keywords: ["senior","sr.","sr ","specialist","architect","consultant","advisor"], color: "#60a5fa" },
-  { label: "Junior / Associate",keywords: ["junior","jr.","associate","assistant","coordinator","analyst","intern","entry"], color: "#34d399" },
-  { label: "Unknown / Other",   keywords: [], color: C.muted },
+  { label: "C-Suite / Founder", color: C.accent },
+  { label: "VP / Director",     color: C.accent2 },
+  { label: "Manager / Lead",    color: "#a78bfa" },
+  { label: "Senior / Mid",      color: "#60a5fa" },
+  { label: "Junior / Associate",color: "#34d399" },
+  { label: "Unknown / Other",   color: C.muted },
 ];
 
+// Word-boundary aware classifier — avoids "president" matching "vice president" etc.
 function classifySeniority(title = "") {
   const t = title.toLowerCase();
-  for (const s of SENIORITY) {
-    if (s.keywords.some(k => t.includes(k))) return s.label;
-  }
+
+  // C-Suite: exact word/phrase matches only
+  if (/\bceo\b|\bcto\b|\bcoo\b|\bcfo\b|\bcpo\b|\bcmo\b|\bcro\b|\bcco\b|\bchief\b/.test(t)) return "C-Suite / Founder";
+  if (/\bfounder\b|\bco-founder\b|\bcofounder\b/.test(t)) return "C-Suite / Founder";
+  // "president" but NOT "vice president"
+  if (/\bpresident\b/.test(t) && !/vice\s+president|vp/.test(t)) return "C-Suite / Founder";
+  // "owner" but NOT "account owner" or similar
+  if (/\bowner\b/.test(t) && !/account\s+owner/.test(t)) return "C-Suite / Founder";
+  // "partner" only when standalone or as managing/founding partner — not "account partner" etc
+  if (/^partner$|\bmanaging\s+partner|\bfounding\s+partner|\bgeneral\s+partner|\bsenior\s+partner|\boperating\s+partner/.test(t)) return "C-Suite / Founder";
+
+  // VP / Director
+  if (/\bvp\b|\bevp\b|\bsvp\b/.test(t)) return "VP / Director";
+  if (/\bvice\s+president\b/.test(t)) return "VP / Director";
+  if (/\bdirector\b/.test(t)) return "VP / Director";
+  if (/\bhead\s+of\b/.test(t)) return "VP / Director";
+  if (/\bgm\b|\bgeneral\s+manager\b/.test(t)) return "VP / Director";
+
+  // Manager / Lead
+  if (/\bmanager\b|\blead\b|\bprincipal\b|\bstaff\b|\bsupervisor\b|\btech\s+lead\b|\bteam\s+lead\b/.test(t)) return "Manager / Lead";
+
+  // Senior / Mid
+  if (/\bsenior\b|\bsr\.?\b|\bspecialist\b|\barchitect\b|\bconsultant\b|\badvisor\b/.test(t)) return "Senior / Mid";
+
+  // Junior / Associate
+  if (/\bjunior\b|\bjr\.?\b|\bassociate\b|\bassistant\b|\bcoordinator\b|\banalyst\b|\bintern\b|\bentry\b/.test(t)) return "Junior / Associate";
+
   return "Unknown / Other";
 }
 
