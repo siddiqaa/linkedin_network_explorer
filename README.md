@@ -4,10 +4,9 @@ A fast, privacy-first dashboard for exploring your LinkedIn connections. Upload 
 
 **[Live demo →](https://linkedin-network-explorer.vercel.app/)**
 
-![Dashboard preview 1](/screenshots/Screenshot%202026-05-16%206.02.59%20PM.png)
-![Dashboard preview 2](/screenshots/Screenshot%202026-05-16%206.03.09%20PM.png)
-![Dashboard preview 3](/screenshots/Screenshot%202026-05-16%206.03.15%20PM.png)
-![Dashboard preview 4](/screenshots/Screenshot%202026-05-16%206.03.20%20PM.png)
+| | | | |
+|---|---|---|---|
+| ![Dashboard preview 1](/screenshots/Screenshot%202026-05-16%206.02.59%20PM.png) | ![Dashboard preview 2](/screenshots/Screenshot%202026-05-16%206.03.09%20PM.png) | ![Dashboard preview 3](/screenshots/Screenshot%202026-05-16%206.03.15%20PM.png) | ![Dashboard preview 4](/screenshots/Screenshot%202026-05-16%206.03.20%20PM.png) |
 
 ---
 
