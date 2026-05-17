@@ -650,7 +650,7 @@ export default function App() {
 
   const TABS = ["overview", "activity", "companies", "connections", "job search"];
 
-  const fontLink = `@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap');`;
+  const fontLink = ``; // fonts loaded via index.html
 
   return (
     <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'Syne', sans-serif" }}>
