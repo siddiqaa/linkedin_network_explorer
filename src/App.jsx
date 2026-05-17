@@ -6,16 +6,16 @@ import {
 
 // ── Palette & theme ──────────────────────────────────────────────────────────
 const C = {
-  bg: "#0a0a0f",
-  surface: "#12121a",
-  card: "#1a1a26",
-  border: "#2a2a3f",
-  accent: "#6ee7b7",       // mint
-  accent2: "#818cf8",      // indigo
-  accent3: "#f472b6",      // pink
-  muted: "#4a4a6a",
-  text: "#e2e8f0",
-  textDim: "#7c7c9e",
+  bg: "#f8f9fb",
+  surface: "#ffffff",
+  card: "#ffffff",
+  border: "#e2e6ed",
+  accent: "#0a7c5c",       // deep teal
+  accent2: "#4f46e5",      // indigo
+  accent3: "#db2777",      // pink
+  muted: "#9ca3af",
+  text: "#111827",
+  textDim: "#6b7280",
 };
 
 // ── Seniority classifier ────────────────────────────────────────────────────
@@ -779,8 +779,8 @@ function ConnectionsTable({ data }) {
               const isNormalized = r["Position_raw"] && r["Position_raw"] !== r["Position"];
               return (
                 <tr key={i} style={{ borderBottom: `1px solid ${C.border}22`, transition: "background 0.1s" }}
-                  onMouseEnter={e => e.currentTarget.style.background = C.card}
-                  onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                  onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                 >
                   <td style={{ padding: "9px 12px", whiteSpace: "nowrap" }}>
                     {r["URL"] ? (
@@ -966,7 +966,8 @@ export default function App() {
         header: true,
         skipEmptyLines: true,
         complete: (result) => {
-          setData(normalizeData(result.data));
+          const clean = result.data.filter(r => (r["First Name"] || r["Last Name"] || "").trim());
+          setData(normalizeData(clean));
           setLoading(false);
         },
       });
@@ -996,7 +997,7 @@ export default function App() {
         ${fontLink}
         * { box-sizing: border-box; margin: 0; padding: 0; }
         ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: ${C.surface}; }
+        ::-webkit-scrollbar-track { background: ${C.bg}; }
         ::-webkit-scrollbar-thumb { background: ${C.border}; border-radius: 3px; }
         input::placeholder { color: ${C.muted}; }
         button:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -1050,7 +1051,7 @@ export default function App() {
               </div>
               <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
                 <button onClick={e => { e.stopPropagation(); fileRef.current?.click(); }}
-                  style={{ padding: "10px 24px", background: C.accent, border: "none", borderRadius: 8, color: C.bg, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                  style={{ padding: "10px 24px", background: C.accent, border: "none", borderRadius: 8, color: '#ffffff', fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
                   Choose file
                 </button>
                 <button onClick={e => { e.stopPropagation(); loadSample(); }}
@@ -1079,7 +1080,7 @@ export default function App() {
             </div>
 
             {/* Tabs */}
-            <div style={{ display: "flex", gap: 4, marginBottom: 20, background: C.surface, padding: 4, borderRadius: 10, width: "fit-content" }}>
+            <div style={{ display: "flex", gap: 4, marginBottom: 20, background: '#eef2f7', padding: 4, borderRadius: 10, width: "fit-content" }}>
               {TABS.map(t => (
                 <button key={t} onClick={() => setTab(t)}
                   style={{
@@ -1089,7 +1090,7 @@ export default function App() {
                     fontSize: 12, fontWeight: tab === t ? 600 : 400,
                     fontFamily: "inherit", textTransform: "capitalize",
                     transition: "all 0.15s",
-                    boxShadow: tab === t ? `0 0 0 1px ${C.border}` : "none",
+                    boxShadow: tab === t ? '0 1px 3px rgba(0,0,0,0.10)' : 'none',
                   }}>
                   {t}
                 </button>
@@ -1267,7 +1268,7 @@ function JobSearch({ data }) {
             disabled={!canSearch}
             style={{
               padding: "10px 28px", background: canSearch ? C.accent : C.muted,
-              border: "none", borderRadius: 8, color: C.bg,
+              border: "none", borderRadius: 8, color: '#ffffff',
               fontSize: 13, fontWeight: 700, cursor: canSearch ? "pointer" : "not-allowed",
               fontFamily: "inherit", transition: "background 0.15s", whiteSpace: "nowrap",
             }}
