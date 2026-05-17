@@ -434,6 +434,15 @@ const TITLE_MAP = {
   "senior talent acquisition consultant": "Senior Recruiter",
   "senior manager, talent acquisition": "Talent Acquisition Manager",
   "head of enablement":               "Head of Enablement",
+
+  // ── Third pass: final count >= 2 stragglers ──
+  "author":                           "Author",
+  "technical recruiter, product management": "Technical Recruiter",
+  "senior solutions consultant":      "Senior Solutions Consultant",
+  "dealer consultant":                "Consultant",
+  "student":                          "Student",
+  "vice president, ticket sales & service": "VP Sales",
+  "director of recruiting":           "Director of Recruiting",
 };
 
 function normalizeTitle(raw = "") {
@@ -642,24 +651,59 @@ function TopCompanies({ data }) {
 }
 
 // ── Filterable Table ──────────────────────────────────────────────────────────
+const COLUMNS = [
+  { key: "name",         label: "Name",         sort: r => `${r["First Name"]} ${r["Last Name"]}`.toLowerCase() },
+  { key: "company",      label: "Company",       sort: r => (r["Company"] || "").toLowerCase() },
+  { key: "position",     label: "Position",      sort: r => (r["Position"] || "").toLowerCase() },
+  { key: "email",        label: "Email",         sort: r => r["Email Address"] ? 0 : 1 },
+  { key: "connectedOn",  label: "Connected On",  sort: r => r["Connected On"] || "" },
+  { key: "seniority",    label: "Seniority",     sort: r => classifySeniority(r["Position"]) },
+];
+
+function SortIcon({ dir }) {
+  if (!dir) return <span style={{ color: C.muted, marginLeft: 4, fontSize: 10 }}>⇅</span>;
+  return <span style={{ color: C.accent, marginLeft: 4, fontSize: 10 }}>{dir === "asc" ? "↑" : "↓"}</span>;
+}
+
 function ConnectionsTable({ data }) {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
-  const PER_PAGE = 50;
+  const [sortKey, setSortKey] = useState(null);
+  const [sortDir, setSortDir] = useState("asc");
+  const PER_PAGE = 200;
+
+  const handleSort = (key) => {
+    if (sortKey === key) {
+      setSortDir(d => d === "asc" ? "desc" : "asc");
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+    setPage(0);
+  };
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    if (!q) return data;
-    return data.filter(r => {
-      // Search across display fields only (exclude internal _matched/_raw meta)
+    let rows = !q ? data : data.filter(r => {
       const searchFields = ["First Name","Last Name","Company","Position","Position_raw","Email Address","Connected On"];
       return searchFields.some(k => String(r[k] || "").toLowerCase().includes(q));
     });
-  }, [data, search]);
+    if (sortKey) {
+      const col = COLUMNS.find(c => c.key === sortKey);
+      if (col) {
+        rows = [...rows].sort((a, b) => {
+          const av = col.sort(a), bv = col.sort(b);
+          if (av < bv) return sortDir === "asc" ? -1 : 1;
+          if (av > bv) return sortDir === "asc" ? 1 : -1;
+          return 0;
+        });
+      }
+    }
+    return rows;
+  }, [data, search, sortKey, sortDir]);
 
   const pages = Math.ceil(filtered.length / PER_PAGE);
   const visible = filtered.slice(page * PER_PAGE, (page + 1) * PER_PAGE);
-
   const handleSearch = (e) => { setSearch(e.target.value); setPage(0); };
 
   return (
@@ -685,8 +729,21 @@ function ConnectionsTable({ data }) {
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
           <thead>
             <tr style={{ borderBottom: `1px solid ${C.border}` }}>
-              {["Name","Company","Position","Email","Connected On","Seniority"].map(h => (
-                <th key={h} style={{ padding: "8px 12px", textAlign: "left", color: C.textDim, fontWeight: 500, whiteSpace: "nowrap" }}>{h}</th>
+              {COLUMNS.map(col => (
+                <th key={col.key}
+                  onClick={() => handleSort(col.key)}
+                  style={{
+                    padding: "8px 12px", textAlign: "left", fontWeight: 500,
+                    whiteSpace: "nowrap", cursor: "pointer", userSelect: "none",
+                    color: sortKey === col.key ? C.accent : C.textDim,
+                    transition: "color 0.15s",
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.color = C.text}
+                  onMouseLeave={e => e.currentTarget.style.color = sortKey === col.key ? C.accent : C.textDim}
+                >
+                  {col.label}
+                  <SortIcon dir={sortKey === col.key ? sortDir : null} />
+                </th>
               ))}
             </tr>
           </thead>
@@ -694,6 +751,7 @@ function ConnectionsTable({ data }) {
             {visible.map((r, i) => {
               const sen = classifySeniority(r["Position"]);
               const senColor = SENIORITY.find(s => s.label === sen)?.color || C.muted;
+              const isNormalized = r["Position_raw"] && r["Position_raw"] !== r["Position"];
               return (
                 <tr key={i} style={{ borderBottom: `1px solid ${C.border}22`, transition: "background 0.1s" }}
                   onMouseEnter={e => e.currentTarget.style.background = C.card}
@@ -712,12 +770,17 @@ function ConnectionsTable({ data }) {
                       <span style={{ color: C.text }}>{r["First Name"]} {r["Last Name"]}</span>
                     )}
                   </td>
-                  <td style={{ padding: "9px 12px", color: C.textDim, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r["Company"]}</td>
-                  <td style={{ padding: "9px 12px", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-                    title={r["Position_raw"] !== r["Position"] ? `Raw: ${r["Position_raw"]}` : ""}>
-                    <span style={{ color: C.textDim }}>{r["Position"]}</span>
-                    {r["Position_raw"] && r["Position_raw"] !== r["Position"] && (
-                      <span style={{ fontSize: 9, color: C.muted, marginLeft: 4 }}>~</span>
+                  <td style={{ padding: "9px 12px", color: C.textDim, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {r["Company"]}
+                  </td>
+                  <td style={{ padding: "9px 12px", maxWidth: 220 }}>
+                    <div style={{ color: C.textDim, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {r["Position"]}
+                    </div>
+                    {isNormalized && (
+                      <div style={{ fontSize: 10, color: C.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 2 }}>
+                        {r["Position_raw"]}
+                      </div>
                     )}
                   </td>
                   <td style={{ padding: "9px 12px", color: r["Email Address"] ? C.accent : C.muted }}>
